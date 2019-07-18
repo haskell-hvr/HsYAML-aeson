@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE Trustworthy     #-}
 
@@ -19,12 +20,18 @@
 module Data.YAML.Aeson
     ( -- * Parsing YAML using JSON models
       -- ** High-level parsing/decoding via 'FromJSON' instances
-      Data.YAML.Aeson.decode1
+      decode1
     , decode1'
+    , decode1Strict
       -- ** Parsing into JSON AST ('J.Value')
     , decodeValue
     , decodeValue'
     , scalarToValue
+      -- ** Encoding/Dumping 
+    , encode1
+    , encode1Strict
+    , encodeValue
+    , encodeValue'
     ) where
 
 import           Control.Applicative    as Ap
@@ -32,10 +39,15 @@ import           Control.Monad.Identity (runIdentity)
 import           Data.Aeson             as J
 import qualified Data.Aeson.Types       as J
 import qualified Data.ByteString.Lazy   as BS.L
+import qualified Data.ByteString        as BS
 import           Data.Text              (Text)
 import qualified Data.Vector            as V
-import           Data.YAML              as Y
+import           Data.YAML              as Y  hiding (decode1, decode1Strict, encode1, encode1Strict)
 import           Data.YAML.Event        (Pos)
+import qualified Data.YAML.Token        as YT
+import           Data.Scientific
+import qualified Data.Map               as Map
+import qualified Data.HashMap.Strict    as HM
 
 -- | Parse a single YAML document using the 'coreSchemaResolver' and decode to Haskell types using 'FromJSON' instances.
 --
@@ -56,6 +68,12 @@ decode1 bs = case decodeValue bs of
       case J.fromJSON v1 of
         J.Success v2 -> Right $! v2
         J.Error err  -> Left ("fromJSON: " ++ err)
+
+-- | Like 'decode1' but takes a strict 'BS.ByteString'
+--
+-- @since 0.2.0
+decode1Strict :: FromJSON v => BS.ByteString -> Either String v
+decode1Strict = decode1 . BS.L.fromChunks . (:[])
 
 -- | Variant of 'decode1' allowing for customization. See 'decodeValue'' for documentation of parameters.
 decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either String Text) -> BS.L.ByteString -> Either String v
@@ -142,3 +160,58 @@ scalarToValue (Y.SFloat x)   = Just $! J.Number (realToFrac x)
 scalarToValue (Y.SInt i)     = Just $! J.Number (fromInteger i)
 scalarToValue (SStr t)       = Just $! J.String t
 scalarToValue (SUnknown _ _) = Nothing
+
+
+-- | Equivalent to the fuction Data.ByteString.toStrict.
+-- O(n) Convert a lazy ByteString into a strict ByteString.
+{-# INLINE bsToStrict #-}
+bsToStrict :: BS.L.ByteString -> BS.ByteString
+#if MIN_VERSION_bytestring(0,10,0)
+bsToStrict = BS.L.toStrict
+#else
+bsToStrict = BS.concat . BS.L.toChunks
+#endif
+
+-- | @since 0.2.0
+instance ToYAML J.Value where
+  toYAML J.Null = Scalar () SNull
+  toYAML (J.Bool b) = toYAML b
+  toYAML (J.String txt) = toYAML txt
+  toYAML (J.Number sc) = case floatingOrInteger sc :: Either Double Integer of
+    Right d -> toYAML d
+    Left int -> toYAML int
+  toYAML (J.Array a) = toYAML (V.toList a)
+  toYAML (J.Object o) = toYAML (Map.fromList (HM.toList o))
+
+-- | Serialize JSON Value using the YAML 1.2 Core schema to a lazy 'BS.L.ByteString'.
+--
+-- 'encode1' emits exactly one YAML document.
+--
+-- See 'encodeValue' for more information about this functions' YAML
+-- encoder configuration.
+--
+-- @since 0.2.0
+encode1 :: ToJSON v => v -> BS.L.ByteString
+encode1 a = encodeValue [J.toJSON a]
+
+-- | Like 'encode1' but outputs 'BS.ByteString'
+--
+-- @since 0.2.0
+encode1Strict :: ToJSON v => v -> BS.ByteString
+encode1Strict = bsToStrict . encode1
+
+-- | Dump YAML Nodes as a lazy 'BS.L.ByteString'
+--
+-- Each YAML 'Node' is emitted as a individual YAML Document where each Document is terminated by a 'DocumentEnd' indicator.
+--
+-- This is a convenience wrapper over `encodeNode'`
+--
+-- @since 0.2.0
+encodeValue :: [J.Value] -> BS.L.ByteString
+encodeValue = encodeValue' coreSchemaEncoder YT.UTF8
+
+-- | Customizable variant of 'encodeNode'
+--
+-- @since 0.2.0
+encodeValue' :: SchemaEncoder -> YT.Encoding -> [J.Value] -> BS.L.ByteString
+encodeValue' schemaEncoder encoding values = Y.encodeNode' schemaEncoder encoding (map (Doc. toYAML) values)
