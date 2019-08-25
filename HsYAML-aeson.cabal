@@ -38,7 +38,7 @@ library
     , ordered-containers
     , mtl         ^>= 2.2.1
     , scientific  ^>= 0.3.6.2
-    , text        ^>= 1.2.3.1
+    , text        ^>= 1.2.3
     , unordered-containers >= 0.2 && < 0.3
     , vector      ^>= 0.12.0.2
 
