@@ -1,10 +1,14 @@
-# Revision history for HsYAML-aeson
+See also http://pvp.haskell.org/faq
 
 ## 0.2.0.0
 
-* Changes in accordance with HsYAML-0.2.0.0 (#1)
-    * New convinence function `decode1Strict`
-    * New functions`encode1`, `encode1Strict`, `encodeValue`, `encodeValue'` for encoding JSON Values
+This release incorporates the work from [Vijay Tadikamalla's GSOC 2019 Project](https://vijayphoenix.github.io/blog/gsoc-the-conclusion/).
+
+* **Breaking change**: The result types of `decode1`, `decode1'`, `decodeValue`, and `decodeValue'` have been changed from `Either String _` to `Either (Pos,String) _` to mirror the error-reporting change in the `HsYAML-0.2` API
+* New functions `encode1`, `encode1Strict`, `encodeValue`, and `encodeValue'` for serializing JSON Values as YAML documents
+* New convenience function `decode1Strict`
+
+----
 
 ## 0.1.0.0
 
