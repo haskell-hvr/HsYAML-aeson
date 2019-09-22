@@ -60,34 +60,49 @@ import qualified Data.YAML.Token        as YT
 -- See 'decodeValue' for more information about this functions' YAML
 -- decoder configuration.
 --
-decode1 :: FromJSON v => BS.L.ByteString -> Either String v
+-- __NOTE__: In contrast to 'FromYAML'-based decoding, error
+-- source-locations are not available when errors occur in the
+-- `FromJSON' decoding phase due to limitations of the 'FromJSON'
+-- class; in such cases an improper 'Pos' value with a negative
+-- 'posCharOffset' will be returned.
+--
+-- @since 0.2.0
+decode1 :: FromJSON v => BS.L.ByteString -> Either (Pos,String) v
 decode1 bs = case decodeValue bs of
-  Left (_ ,err) -> Left err
-  Right vs -> case vs of
-    [] -> Left "No documents found in YAML stream"
-    (_:_:_) -> Left "Multiple documents encountered in YAML stream"
-    [v1] -> do
-      case J.fromJSON v1 of
-        J.Success v2 -> Right $! v2
-        J.Error err  -> Left ("fromJSON: " ++ err)
+    Left err -> Left err
+    Right vs -> case vs of
+      [] -> Left (zeroPos, "No documents found in YAML stream")
+      (_:_:_) -> Left (dummyPos, "Multiple documents encountered in YAML stream")
+      [v1] -> do
+        case J.fromJSON v1 of
+          J.Success v2 -> Right $! v2
+          J.Error err  -> Left (dummyPos, "fromJSON: " ++ err)
+  where
+    zeroPos  = Pos { posByteOffset = 0, posCharOffset = 0, posLine = 1, posColumn = 0 }
+    dummyPos = Pos { posByteOffset = -1, posCharOffset = -1, posLine = 1, posColumn = 0 }
 
 -- | Like 'decode1' but takes a strict 'BS.ByteString'
 --
 -- @since 0.2.0
-decode1Strict :: FromJSON v => BS.ByteString -> Either String v
+decode1Strict :: FromJSON v => BS.ByteString -> Either (Pos,String) v
 decode1Strict = decode1 . BS.L.fromChunks . (:[])
 
 -- | Variant of 'decode1' allowing for customization. See 'decodeValue'' for documentation of parameters.
-decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either String Text) -> BS.L.ByteString -> Either String v
+--
+-- @since 0.2.0
+decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either String Text) -> BS.L.ByteString -> Either (Pos,String) v
 decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
-  Left (_ ,err) -> Left err
-  Right vs -> case vs of
-    [] -> Left "No documents found in YAML stream"
-    (_:_:_) -> Left "Multiple documents encountered in YAML stream"
-    [v1] -> do
-      case J.fromJSON v1 of
-        J.Success v2 -> Right $! v2
-        J.Error err  -> Left ("fromJSON: " ++ err)
+    Left err -> Left err
+    Right vs -> case vs of
+      [] -> Left (zeroPos, "No documents found in YAML stream")
+      (_:_:_) -> Left (dummyPos, "Multiple documents encountered in YAML stream")
+      [v1] -> do
+        case J.fromJSON v1 of
+          J.Success v2 -> Right $! v2
+          J.Error err  -> Left (dummyPos, "fromJSON: " ++ err)
+  where
+    zeroPos  = Pos { posByteOffset = 0, posCharOffset = 0, posLine = 1, posColumn = 0 }
+    dummyPos = Pos { posByteOffset = -1, posCharOffset = -1, posLine = 1, posColumn = 0 }
 
 -- | Parse YAML documents into JSON 'Value' ASTs
 --
@@ -104,6 +119,8 @@ decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
 -- which performs no conversion and will fail when encountering YAML
 -- Scalars that have not been resolved to a text Scalar (according to
 -- the respective YAML schema resolver).
+--
+-- @since 0.2.0
 decodeValue :: BS.L.ByteString -> Either (Pos, String) [J.Value]
 decodeValue = decodeValue' coreSchemaResolver identityKeyConv
   where
@@ -118,7 +135,8 @@ decodeValue = decodeValue' coreSchemaResolver identityKeyConv
 -- __NOTE__: This decoder ignores YAML tags and relies on the YAML
 -- 'SchemaResolver' provided to ensure that scalars have been resolved
 -- to the proper known core YAML types.
-
+--
+-- @since 0.2.0
 decodeValue' :: SchemaResolver  -- ^ YAML Schema resolver to use
              -> (J.Value -> Either String Text)
                 -- ^ JSON object key conversion function. This operates on the YAML node as resolved by the 'SchemaResolver' and subsequently converted into a JSON Value according to the 'scalarToValue' conversion. See 'decodeValue' documentation for an example.
@@ -157,7 +175,7 @@ decodeValue' SchemaResolver{..} keyconv bs0
                 Nothing -> Left (pos, "unresolved YAML scalar encountered")
                 Just v  -> Right $! v
 
--- | Convert a YAML 'Scalar' into a JSON 'J.Value'
+-- | Convert a YAML t'Scalar' into a JSON 'J.Value'
 --
 -- This conversion will return 'Nothing' for 'SUnknown',
 -- i.e. unresolved YAML nodes.
@@ -210,7 +228,7 @@ encode1Strict = bsToStrict . encode1
 
 -- | Dump YAML Nodes as a lazy 'BS.L.ByteString'
 --
--- Each YAML 'Node' is emitted as a individual YAML Document where each Document is terminated by a 'DocumentEnd' indicator.
+-- Each YAML 'Node' is emitted as a individual YAML Document where each Document is terminated by a v'Data.YAML.Event.DocumentEnd' indicator.
 --
 -- This is a convenience wrapper over `encodeNode'`
 --
