@@ -47,6 +47,7 @@ import qualified Data.Vector            as V
 import           Data.YAML              as Y  hiding (decode1, decode1Strict, encode1, encode1Strict)
 import           Data.YAML.Event        (Pos)
 import qualified Data.YAML.Token        as YT
+import           Data.YAML.Schema
 import           Data.Scientific
 import qualified Data.Map               as Map
 import qualified Data.HashMap.Strict    as HM
@@ -78,7 +79,7 @@ decode1Strict :: FromJSON v => BS.ByteString -> Either String v
 decode1Strict = decode1 . BS.L.fromChunks . (:[])
 
 -- | Variant of 'decode1' allowing for customization. See 'decodeValue'' for documentation of parameters.
-decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either String Text) -> BS.L.ByteString -> Either String v
+decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either (Pos, String) Text) -> BS.L.ByteString -> Either String v
 decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
   Left (_ ,err) -> Left err
   Right vs -> case vs of 
@@ -107,10 +108,12 @@ decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
 decodeValue :: BS.L.ByteString -> Either (Pos, String) [J.Value]
 decodeValue = decodeValue' coreSchemaResolver identityKeyConv
   where
-    identityKeyConv :: J.Value -> Either String Text
+    identityKeyConv :: J.Value -> Either (Pos, String) Text
     identityKeyConv (J.String k) = Right k
-    identityKeyConv _ = Left "non-String key encountered in mapping"
+    identityKeyConv _ = Left (fakePos, "non-String key encountered in mapping")
 
+fakePos :: Pos
+fakePos = Pos { posByteOffset = -1 , posCharOffset = -1  , posLine = 1 , posColumn = 0 }
 -- | Parse YAML documents into JSON 'Value' ASTs
 --
 -- YAML Anchors will be resolved and inlined accordingly. Resulting YAML cycles are not supported and will be treated as a decoding error.
@@ -120,7 +123,7 @@ decodeValue = decodeValue' coreSchemaResolver identityKeyConv
 -- to the proper known core YAML types.
 
 decodeValue' :: SchemaResolver  -- ^ YAML Schema resolver to use
-             -> (J.Value -> Either String Text)
+             -> (J.Value -> Either (Pos, String) Text)
                 -- ^ JSON object key conversion function. This operates on the YAML node as resolved by the 'SchemaResolver' and subsequently converted into a JSON Value according to the 'scalarToValue' conversion. See 'decodeValue' documentation for an example.
 
              -> BS.L.ByteString -- ^ YAML document to parse
@@ -128,27 +131,33 @@ decodeValue' :: SchemaResolver  -- ^ YAML Schema resolver to use
 decodeValue' SchemaResolver{..} keyconv bs0
     = runIdentity (decodeLoader failsafeLoader bs0)
   where
-    failsafeLoader = Loader { yScalar   = \t s v _ -> pure $! schemaResolverScalar t s v >>= mkScl
-                            , ySequence = \t vs _  -> pure $! schemaResolverSequence t >>= \_ -> mkArr vs
-                            , yMapping  = \t kvs _  -> pure $! schemaResolverMapping  t >>= \_ -> mkObj kvs
-                            , yAlias    = \_ c n _ -> pure $! if c then Left "cycle detected" else Right n
+    failsafeLoader = Loader { yScalar   = \t s v pos -> pure $! case schemaResolverScalar t s v of
+                                                                Left e -> Left (pos, e)
+                                                                Right vs -> mkScl vs pos
+                            , ySequence = \t vs pos  -> pure $! case schemaResolverSequence t of
+                                                                Left e -> Left (pos, e)
+                                                                Right _ -> mkArr vs 
+                            , yMapping  = \t kvs pos  -> pure $! case schemaResolverMapping t of
+                                                                    Left e -> Left (pos, e)
+                                                                    Right _ -> mkObj kvs
+                            , yAlias    = \_ c n pos -> pure $! if c then Left (pos, "cycle detected") else Right n
                             , yAnchor   = \_ n _   -> Ap.pure $! Right $! n
                             }
 
-    mkObj :: [(J.Value, J.Value)] -> Either String J.Value
+    mkObj :: [(J.Value, J.Value)] -> Either (Pos, String) J.Value
     mkObj xs = object <$> mapM mkPair xs
 
-    mkPair :: (J.Value,J.Value) -> Either String J.Pair
+    mkPair :: (J.Value,J.Value) -> Either (Pos, String) J.Pair
     mkPair (k, v) = do
       k' <- keyconv k
       Right (k', v)
 
-    mkArr :: [J.Value] -> Either String J.Value
+    mkArr :: [J.Value] -> Either (Pos, String) J.Value
     mkArr xs = Right $! J.Array $! V.fromList xs
 
-    mkScl :: Y.Scalar -> Either String J.Value
-    mkScl s = case scalarToValue s of
-                Nothing -> Left "unresolved YAML scalar encountered"
+    mkScl :: Y.Scalar -> Pos -> Either (Pos, String) J.Value
+    mkScl s pos = case scalarToValue s of
+                Nothing -> Left (pos, "unresolved YAML scalar encountered")
                 Just v  -> Right $! v
 
 -- | Convert a YAML 'Scalar' into a JSON 'J.Value'
