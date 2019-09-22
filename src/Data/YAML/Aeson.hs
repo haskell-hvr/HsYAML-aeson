@@ -29,7 +29,7 @@ module Data.YAML.Aeson
     , decodeValue
     , decodeValue'
     , scalarToValue
-      -- ** Encoding/Dumping 
+      -- ** Encoding/Dumping
     , encode1
     , encode1Strict
     , encodeValue
@@ -40,16 +40,16 @@ import           Control.Applicative    as Ap
 import           Control.Monad.Identity (runIdentity)
 import           Data.Aeson             as J
 import qualified Data.Aeson.Types       as J
-import qualified Data.ByteString.Lazy   as BS.L
 import qualified Data.ByteString        as BS
+import qualified Data.ByteString.Lazy   as BS.L
+import qualified Data.HashMap.Strict    as HM
+import qualified Data.Map               as Map
+import           Data.Scientific
 import           Data.Text              (Text)
 import qualified Data.Vector            as V
-import           Data.YAML              as Y  hiding (decode1, decode1Strict, encode1, encode1Strict)
-import qualified Data.YAML.Token        as YT
+import           Data.YAML              as Y hiding (decode1, decode1Strict, encode1, encode1Strict)
 import           Data.YAML.Schema
-import           Data.Scientific
-import qualified Data.Map               as Map
-import qualified Data.HashMap.Strict    as HM
+import qualified Data.YAML.Token        as YT
 
 -- | Parse a single YAML document using the 'coreSchemaResolver' and decode to Haskell types using 'FromJSON' instances.
 --
@@ -81,7 +81,7 @@ decode1Strict = decode1 . BS.L.fromChunks . (:[])
 decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either String Text) -> BS.L.ByteString -> Either String v
 decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
   Left (_ ,err) -> Left err
-  Right vs -> case vs of 
+  Right vs -> case vs of
     [] -> Left "No documents found in YAML stream"
     (_:_:_) -> Left "Multiple documents encountered in YAML stream"
     [v1] -> do
@@ -109,7 +109,7 @@ decodeValue = decodeValue' coreSchemaResolver identityKeyConv
   where
     identityKeyConv :: J.Value -> Either String Text
     identityKeyConv (J.String k) = Right k
-    identityKeyConv _ = Left "non-String key encountered in mapping"
+    identityKeyConv _            = Left "non-String key encountered in mapping"
 
 -- | Parse YAML documents into JSON 'Value' ASTs
 --
@@ -129,13 +129,13 @@ decodeValue' SchemaResolver{..} keyconv bs0
     = runIdentity (decodeLoader failsafeLoader bs0)
   where
     failsafeLoader = Loader { yScalar   = \t s v pos -> pure $! case schemaResolverScalar t s v of
-                                                                Left e -> Left (pos, e)
+                                                                Left e   -> Left (pos, e)
                                                                 Right vs -> mkScl vs pos
                             , ySequence = \t vs pos  -> pure $! case schemaResolverSequence t of
-                                                                Left e -> Left (pos, e)
-                                                                Right _ -> mkArr vs 
+                                                                Left e  -> Left (pos, e)
+                                                                Right _ -> mkArr vs
                             , yMapping  = \t kvs pos  -> pure $! case schemaResolverMapping t of
-                                                                    Left e -> Left (pos, e)
+                                                                    Left e  -> Left (pos, e)
                                                                     Right _ -> mkObj pos kvs
                             , yAlias    = \_ c n pos -> pure $! if c then Left (pos, "cycle detected") else Right n
                             , yAnchor   = \_ n _   -> Ap.pure $! Right $! n
@@ -146,8 +146,8 @@ decodeValue' SchemaResolver{..} keyconv bs0
 
     mkPair :: Pos -> (J.Value,J.Value) -> Either (Pos, String) J.Pair
     mkPair pos (k, v) = case keyconv k of
-        Right k'  -> Right (k', v)
-        Left s    -> Left (pos, s)
+        Right k' -> Right (k', v)
+        Left s   -> Left (pos, s)
 
     mkArr :: [J.Value] -> Either (Pos, String) J.Value
     mkArr xs = Right $! J.Array $! V.fromList xs
@@ -186,7 +186,7 @@ instance ToYAML J.Value where
   toYAML (J.Bool b) = toYAML b
   toYAML (J.String txt) = toYAML txt
   toYAML (J.Number sc) = case floatingOrInteger sc :: Either Double Integer of
-    Right d -> toYAML d
+    Right d  -> toYAML d
     Left int -> toYAML int
   toYAML (J.Array a) = toYAML (V.toList a)
   toYAML (J.Object o) = toYAML (Map.fromList (HM.toList o))
