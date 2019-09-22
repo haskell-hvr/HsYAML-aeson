@@ -45,7 +45,6 @@ import qualified Data.ByteString        as BS
 import           Data.Text              (Text)
 import qualified Data.Vector            as V
 import           Data.YAML              as Y  hiding (decode1, decode1Strict, encode1, encode1Strict)
-import           Data.YAML.Event        (Pos)
 import qualified Data.YAML.Token        as YT
 import           Data.YAML.Schema
 import           Data.Scientific
