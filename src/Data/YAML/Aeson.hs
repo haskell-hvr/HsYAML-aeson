@@ -79,7 +79,7 @@ decode1Strict :: FromJSON v => BS.ByteString -> Either String v
 decode1Strict = decode1 . BS.L.fromChunks . (:[])
 
 -- | Variant of 'decode1' allowing for customization. See 'decodeValue'' for documentation of parameters.
-decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either (Pos, String) Text) -> BS.L.ByteString -> Either String v
+decode1' :: FromJSON v => SchemaResolver -> (J.Value -> Either String Text) -> BS.L.ByteString -> Either String v
 decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
   Left (_ ,err) -> Left err
   Right vs -> case vs of 
@@ -108,12 +108,10 @@ decode1' schema keyconv bs = case decodeValue' schema keyconv bs of
 decodeValue :: BS.L.ByteString -> Either (Pos, String) [J.Value]
 decodeValue = decodeValue' coreSchemaResolver identityKeyConv
   where
-    identityKeyConv :: J.Value -> Either (Pos, String) Text
+    identityKeyConv :: J.Value -> Either String Text
     identityKeyConv (J.String k) = Right k
-    identityKeyConv _ = Left (fakePos, "non-String key encountered in mapping")
+    identityKeyConv _ = Left "non-String key encountered in mapping"
 
-fakePos :: Pos
-fakePos = Pos { posByteOffset = -1 , posCharOffset = -1  , posLine = 1 , posColumn = 0 }
 -- | Parse YAML documents into JSON 'Value' ASTs
 --
 -- YAML Anchors will be resolved and inlined accordingly. Resulting YAML cycles are not supported and will be treated as a decoding error.
@@ -123,7 +121,7 @@ fakePos = Pos { posByteOffset = -1 , posCharOffset = -1  , posLine = 1 , posColu
 -- to the proper known core YAML types.
 
 decodeValue' :: SchemaResolver  -- ^ YAML Schema resolver to use
-             -> (J.Value -> Either (Pos, String) Text)
+             -> (J.Value -> Either String Text)
                 -- ^ JSON object key conversion function. This operates on the YAML node as resolved by the 'SchemaResolver' and subsequently converted into a JSON Value according to the 'scalarToValue' conversion. See 'decodeValue' documentation for an example.
 
              -> BS.L.ByteString -- ^ YAML document to parse
@@ -139,18 +137,18 @@ decodeValue' SchemaResolver{..} keyconv bs0
                                                                 Right _ -> mkArr vs 
                             , yMapping  = \t kvs pos  -> pure $! case schemaResolverMapping t of
                                                                     Left e -> Left (pos, e)
-                                                                    Right _ -> mkObj kvs
+                                                                    Right _ -> mkObj pos kvs
                             , yAlias    = \_ c n pos -> pure $! if c then Left (pos, "cycle detected") else Right n
                             , yAnchor   = \_ n _   -> Ap.pure $! Right $! n
                             }
 
-    mkObj :: [(J.Value, J.Value)] -> Either (Pos, String) J.Value
-    mkObj xs = object <$> mapM mkPair xs
+    mkObj :: Pos -> [(J.Value, J.Value)] -> Either (Pos, String) J.Value
+    mkObj pos xs = object <$> mapM (mkPair pos) xs
 
-    mkPair :: (J.Value,J.Value) -> Either (Pos, String) J.Pair
-    mkPair (k, v) = do
-      k' <- keyconv k
-      Right (k', v)
+    mkPair :: Pos -> (J.Value,J.Value) -> Either (Pos, String) J.Pair
+    mkPair pos (k, v) = case keyconv k of
+        Right k'  -> Right (k', v)
+        Left s    -> Left (pos, s)
 
     mkArr :: [J.Value] -> Either (Pos, String) J.Value
     mkArr xs = Right $! J.Array $! V.fromList xs
