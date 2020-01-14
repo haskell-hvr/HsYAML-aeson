@@ -27,6 +27,11 @@ source-repository head
   type: git
   location: https://github.com/hvr/HsYAML-aeson.git
 
+flag exe
+  description: Enable @exe:yaml-test@ component
+  manual: True
+  default: False
+
 library
   exposed-modules: Data.YAML.Aeson
   build-depends:
@@ -46,20 +51,17 @@ library
   other-extensions:    RecordWildCards Trustworthy
   ghc-options: -Wall
 
-executable json2yaml
-  hs-source-dirs:      exe
-  main-is:             json2yaml.hs
-  build-depends:
-    , base
-    , HsYAML-aeson
-    , aeson
-    , bytestring
+executable yaml-test
+  hs-source-dirs:      src-test
+  main-is:             Main.hs
+  default-language:    Haskell2010
 
-executable yaml2json
-  hs-source-dirs:      exe
-  main-is:             yaml2json.hs
-  build-depends:
-    , base
-    , HsYAML-aeson
-    , aeson
-    , bytestring
+  if flag(exe)
+    build-depends: HsYAML
+                 , HsYAML-aeson
+                 , base
+                 , aeson
+                 , bytestring
+                 , directory   >= 1.2 && < 1.4
+  else
+    buildable: False
