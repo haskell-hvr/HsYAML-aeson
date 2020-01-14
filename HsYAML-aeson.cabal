@@ -45,3 +45,21 @@ library
   default-language:    Haskell2010
   other-extensions:    RecordWildCards Trustworthy
   ghc-options: -Wall
+
+executable json2yaml
+  hs-source-dirs:      exe
+  main-is:             json2yaml.hs
+  build-depends:
+    , base
+    , HsYAML-aeson
+    , aeson
+    , bytestring
+
+executable yaml2json
+  hs-source-dirs:      exe
+  main-is:             yaml2json.hs
+  build-depends:
+    , base
+    , HsYAML-aeson
+    , aeson
+    , bytestring
