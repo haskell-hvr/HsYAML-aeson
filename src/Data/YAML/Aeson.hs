@@ -39,6 +39,10 @@ module Data.YAML.Aeson
 import           Control.Applicative    as Ap
 import           Control.Monad.Identity (runIdentity)
 import           Data.Aeson             as J
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.Key                as AK
+import qualified Data.Aeson.KeyMap             as AKM
+#endif
 import qualified Data.Aeson.Types       as J
 import qualified Data.ByteString        as BS
 import qualified Data.ByteString.Lazy   as BS.L
@@ -164,8 +168,13 @@ decodeValue' SchemaResolver{..} keyconv bs0
 
     mkPair :: Pos -> (J.Value,J.Value) -> Either (Pos, String) J.Pair
     mkPair pos (k, v) = case keyconv k of
-        Right k' -> Right (k', v)
+        Right k' -> Right (fT k', v)
         Left s   -> Left (pos, s)
+#if MIN_VERSION_aeson(2,0,0)
+    fT = AK.fromText
+#else
+    fT = id   
+#endif
 
     mkArr :: [J.Value] -> Either (Pos, String) J.Value
     mkArr xs = Right $! J.Array $! V.fromList xs
@@ -207,7 +216,15 @@ instance ToYAML J.Value where
     Right d  -> toYAML d
     Left int -> toYAML int
   toYAML (J.Array a) = toYAML (V.toList a)
-  toYAML (J.Object o) = toYAML (Map.fromList (HM.toList o))
+  toYAML (J.Object o) = toYAML (Map.fromList (fromObject o))
+   where
+#if MIN_VERSION_aeson(2,0,0)
+    fromObject = fmap (\(k, v) -> (AK.toText k, v)) . AKM.toList
+#else
+    fromObject = HM.toList
+#endif
+
+
 
 -- | Serialize JSON Value using the YAML 1.2 Core schema to a lazy 'BS.L.ByteString'.
 --
