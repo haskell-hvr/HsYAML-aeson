@@ -11,7 +11,7 @@ import           System.Environment
 import           System.Exit
 import           System.IO
 import           Data.YAML
-import           Data.YAML.Aeson            
+import           Data.YAML.Aeson
 
 main :: IO ()
 main = do
@@ -29,7 +29,7 @@ main = do
       | otherwise -> do
           hPutStrLn stderr "unexpected arguments passed to json2yaml sub-command"
           exitFailure
-    
+
     _ -> do
       hPutStrLn stderr "usage: yaml-test <command> [<args>]"
       hPutStrLn stderr ""
@@ -57,4 +57,4 @@ cmdJson2Yaml = do
     Left e -> do
       hPutStrLn stderr e
       exitFailure
-    Right x -> (BS.L.putStr . encodeValue . pure) x 
+    Right x -> (BS.L.putStr . encodeValue . return) x
