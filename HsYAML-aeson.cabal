@@ -1,10 +1,10 @@
 cabal-version:       2.2
 name:                HsYAML-aeson
-version:             0.2.0.0
+version:             0.2.0.1
 license:             GPL-2.0-or-later
 license-file:        LICENSE.GPLv2
 author:              Herbert Valerio Riedel
-maintainer:          hvr@gnu.org
+maintainer:          hvr@gnu.org, Andreas Abel
 copyright:           2018-2019 Herbert Valerio Riedel
 category:            Text, Codec, Web, JSON, YAML
 synopsis:            JSON to YAML Adapter

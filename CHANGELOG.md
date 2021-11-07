@@ -1,5 +1,10 @@
 See also http://pvp.haskell.org/faq
 
+## 0.2.0.1
+
+* Allow `aeson-2.0` and `bytestring-0.11`.
+* Build tested with GHC 7.4 -- 9.0.
+
 ## 0.2.0.0
 
 This release incorporates the work from [Vijay Tadikamalla's GSOC 2019 Project](https://vijayphoenix.github.io/blog/gsoc-the-conclusion/).
