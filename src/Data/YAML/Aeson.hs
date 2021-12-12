@@ -48,7 +48,6 @@ import qualified Data.ByteString        as BS
 import qualified Data.ByteString.Lazy   as BS.L
 import qualified Data.HashMap.Strict    as HM
 import qualified Data.Map               as Map
-import           Data.Scientific
 import           Data.Text              (Text)
 import qualified Data.Vector            as V
 import           Data.YAML              as Y hiding (decode1, decode1Strict, encode1, encode1Strict)
@@ -212,9 +211,7 @@ instance ToYAML J.Value where
   toYAML J.Null = Scalar () SNull
   toYAML (J.Bool b) = toYAML b
   toYAML (J.String txt) = toYAML txt
-  toYAML (J.Number sc) = case floatingOrInteger sc :: Either Scientific Integer of
-    Right d  -> toYAML d
-    Left int -> toYAML int
+  toYAML (J.Number sc) = toYAML sc
   toYAML (J.Array a) = toYAML (V.toList a)
   toYAML (J.Object o) = toYAML (Map.fromList (fromObject o))
    where
