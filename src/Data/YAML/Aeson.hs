@@ -212,7 +212,7 @@ instance ToYAML J.Value where
   toYAML J.Null = Scalar () SNull
   toYAML (J.Bool b) = toYAML b
   toYAML (J.String txt) = toYAML txt
-  toYAML (J.Number sc) = case floatingOrInteger sc :: Either Double Integer of
+  toYAML (J.Number sc) = case floatingOrInteger sc :: Either Scientific Integer of
     Right d  -> toYAML d
     Left int -> toYAML int
   toYAML (J.Array a) = toYAML (V.toList a)
