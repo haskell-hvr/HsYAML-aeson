@@ -40,13 +40,14 @@ import           Control.Applicative    as Ap
 import           Control.Monad.Identity (runIdentity)
 import           Data.Aeson             as J
 #if MIN_VERSION_aeson(2,0,0)
-import qualified Data.Aeson.Key                as AK
-import qualified Data.Aeson.KeyMap             as AKM
+import qualified Data.Aeson.Key         as AK
+import qualified Data.Aeson.KeyMap      as AKM
+#else
+import qualified Data.HashMap.Strict    as HM
 #endif
 import qualified Data.Aeson.Types       as J
 import qualified Data.ByteString        as BS
 import qualified Data.ByteString.Lazy   as BS.L
-import qualified Data.HashMap.Strict    as HM
 import qualified Data.Map               as Map
 import           Data.Scientific
 import           Data.Text              (Text)
