@@ -1,3 +1,5 @@
+branches: master ci-* release*
+
 installed: +all -transformers
 
 constraint-set mtl-2.3
