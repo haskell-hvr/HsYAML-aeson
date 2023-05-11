@@ -1,1 +1,9 @@
+branches: master ci-* release*
+
 installed: +all -transformers
+
+constraint-set mtl-2.3
+  ghc: >=8.6
+  constraints: mtl ^>=2.3
+  tests: True
+  run-tests: True
