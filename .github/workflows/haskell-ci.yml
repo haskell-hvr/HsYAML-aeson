@@ -293,8 +293,8 @@ jobs:
           rm -f cabal.project.local
       - name: constraint set mtl-2.3
         run: |
-          if [ $((HCNUMVER >= 80600)) -ne 0 ] ; then $CABAL v2-build $ARG_COMPILER --enable-tests --disable-benchmarks --constraint='mtl ^>=2.3' --dependencies-only -j2 all ; fi
-          if [ $((HCNUMVER >= 80600)) -ne 0 ] ; then $CABAL v2-build $ARG_COMPILER --enable-tests --disable-benchmarks --constraint='mtl ^>=2.3' all ; fi
+          if [ $((HCNUMVER >= 80600 && HCNUMVER < 90000 || HCNUMVER >= 90200)) -ne 0 ] ; then $CABAL v2-build $ARG_COMPILER --enable-tests --disable-benchmarks --constraint='mtl ^>=2.3' --dependencies-only -j2 all ; fi
+          if [ $((HCNUMVER >= 80600 && HCNUMVER < 90000 || HCNUMVER >= 90200)) -ne 0 ] ; then $CABAL v2-build $ARG_COMPILER --enable-tests --disable-benchmarks --constraint='mtl ^>=2.3' all ; fi
       - name: save cache
         uses: actions/cache/save@v3
         if: always()
