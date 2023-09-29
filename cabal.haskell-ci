@@ -1,17 +1,19 @@
-branches: master ci-* release*
+branches: master
 
 installed: +all -transformers
-
-constraint-set mtl-2.3
-  ghc: >=8.6 && < 9 || >=9.2
-  constraints: mtl ^>=2.3
-  tests: True
-  run-tests: True
 
 constraint-set bytestring-0.12
   ghc: >=8.2
   constraints: bytestring ^>=0.12.0.0
   tests: True
   run-tests: True
+
+constraint-set containers-0.7
+  ghc: >=8.2 && < 9.7
+  constraints: containers ^>=0.7
+  tests: True
+  run-tests: True
+
 raw-project
   allow-newer: bytestring
+  allow-newer: containers
