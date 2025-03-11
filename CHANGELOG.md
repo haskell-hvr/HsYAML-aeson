@@ -1,11 +1,21 @@
-See also http://pvp.haskell.org/faq
+## 0.2.0.2
+
+_2025-03-11, Andreas Abel_
+
+* Drop support for GHC 7.
+* Support latest dependencies.
+* Tested with GHC 8.0 - 9.12.1.
 
 ## 0.2.0.1
+
+_2021-11-07, Andreas Abel_
 
 * Allow `aeson-2.0` and `bytestring-0.11`.
 * Build tested with GHC 7.4 -- 9.0.
 
 ## 0.2.0.0
+
+_2019-09-22, Herbert Valerio Riedel_
 
 This release incorporates the work from [Vijay Tadikamalla's GSOC 2019 Project](https://vijayphoenix.github.io/blog/gsoc-the-conclusion/).
 

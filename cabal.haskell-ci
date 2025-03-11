@@ -2,9 +2,9 @@ branches: master
 
 installed: +all -transformers
 
-constraint-set containers-0.7
-  ghc: >=8.2 && < 9.7
-  constraints: containers ^>=0.7
+constraint-set containers-0.8
+  ghc: >=8.2
+  constraints: containers ^>=0.8
   tests: True
   run-tests: True
 

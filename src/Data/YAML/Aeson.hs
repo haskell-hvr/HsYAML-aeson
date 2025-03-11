@@ -174,7 +174,7 @@ decodeValue' SchemaResolver{..} keyconv bs0
 #if MIN_VERSION_aeson(2,0,0)
     fT = AK.fromText
 #else
-    fT = id   
+    fT = id
 #endif
 
     mkArr :: [J.Value] -> Either (Pos, String) J.Value
@@ -202,11 +202,7 @@ scalarToValue (SUnknown _ _) = Nothing
 -- O(n) Convert a lazy ByteString into a strict ByteString.
 {-# INLINE bsToStrict #-}
 bsToStrict :: BS.L.ByteString -> BS.ByteString
-#if MIN_VERSION_bytestring(0,10,0)
 bsToStrict = BS.L.toStrict
-#else
-bsToStrict = BS.concat . BS.L.toChunks
-#endif
 
 -- | @since 0.2.0
 instance ToYAML J.Value where
